@@ -1,0 +1,45 @@
+<p><!DOCTYPE html> <html lang=&quot;en&quot;> <head>  <meta charset=&quot;UTF-8&quot;>  <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>  <title>QBASIC Web Interpreter</title>  <!-- CodeMirror CSS -->  <link rel=&quot;stylesheet&quot; href=&quot;https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css&quot; integrity=&quot;sha512-n7tNEzvU8JDwQ5IWXwZJ88UViWmjXw9TibkZ3FOjMcYFGsNVHuknHKJviH5Q5E334n+5obZh3K02OPgNHneDJmHw==&quot; crossorigin=&quot;anonymous&quot; referrerpolicy=&quot;no-referrer&quot; />  <link rel=&quot;stylesheet&quot; href=&quot;https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css&quot; integrity=&quot;sha512-bJArKhkE3QVHIYEAs6G5uVo0PdjMbW4RlsM9LVh1F9tCOX1XNrjQ2wSnhQ/2QZrP/YfK4Dw44XsOc Nz5tGhUNtkQ==&quot; crossorigin=&quot;anonymous&quot; referrerpolicy=&quot;no-referrer&quot; />  <style>  body {  font-family: Arial, sans-serif;  margin: 0;  padding: 20px;  background-color: #1a1a1a;  color: #f0f0f0;  }  .container {  max-width: 900px;  margin: 0 auto;  }  h1 {  text-align: center;  color: #66d9ef;  margin-bottom: 20px;  }  .CodeMirror {  height: 300px !important;  border: 1px solid #333;  border-radius: 5px;  font-size: 14px;  }  button {  display: block;  width: 100px;  margin: 10px auto;  padding: 10px;  background-color: #66d9ef;  color: #1a1a1a;  border: none;  border-radius: 5px;  cursor: pointer;  font-weight: bold;  }  button:hover {  background-color: #52c4d8;  }  #output {  width: 100%;  min-height: 100px;  padding: 10px;  background-color: #282a36;  border: 1px solid #444;  border-radius: 5px;  font-family: 'Courier New', Courier, monospace;  color: #f8f8f2;  white-space: pre-wrap;  }  #canvas {  border: 1px solid #444;  margin-top: 10px;  background-color: #000;  border-radius: 5px;  }  </style> </head> <body>  <div class=&quot;container&quot;>  <h1>QBASIC Web Interpreter</h1>  <div id=&quot;editor&quot;></div>  <button onclick=&quot;runCode()&quot;>Run</button>  <div id=&quot;output&quot;></div>  <canvas id=&quot;canvas&quot; width=&quot;320&quot; height=&quot;200&quot;></canvas>  </div></p>
+
+<p> <!-- CodeMirror JS -->  <script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js&quot; integrity=&quot;sha512-uMQe0j/0l2TVOUQsX7Ta9O3vfwPFF8vKkSr6Gy6XvLuS3wLQuEqurYaLSxlxDYBsRh4+x7a/dZOu5TuqGCgE8cIA==&quot; crossorigin=&quot;anonymous&quot; referrerpolicy=&quot;no-referrer&quot;></script>  <script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/vb/vb.min.js&quot; integrity=&quot;sha512-KkQ57kC+gtJBFj513qB9hQ7jskB5bWd8v6l7ZpdwT0+cX39Z9LOO9Ah0yn2PFrGzvMh0R/LvfrLukxmtNAzDi9Sg==&quot; crossorigin=&quot;anonymous&quot; referrerpolicy=&quot;no-referrer&quot;></script></p>
+
+<p> <script>  // Initialize CodeMirror  const editor = CodeMirror(document.getElementById('editor'), {  value: &#96;10 PRINT &quot;Starting program...&quot; 20 INPUT &quot;Enter a number: &quot;, num 30 LET x = num * 2 40 IF x > 10 THEN GOSUB 100 50 FOR i = 1 TO 5 60 PRINT &quot;Loop iteration &quot;; i 70 NEXT i 80 SCREEN 1 90 PSET (50, 50), 255 100 PRINT &quot;Subroutine: x is &quot;; x 110 RETURN&#96;,  mode: 'vb', // Closest mode to QBASIC  theme: 'dracula',  lineNumbers: true,  tabSize: 2,  indentWithTabs: true  });</p>
+
+<p> // Modular QBASIC Interpreter  const output = document.getElementById('output');  const canvas = document.getElementById('canvas');  const ctx = canvas.getContext('2d');</p>
+
+<p> // State management  const state = {  variables: {},  lines: [],  lineNumbers: {},  currentLine: 0,  output: '',  graphicsMode: false  };</p>
+
+<p> // Utility to evaluate expressions  function evaluateExpression(expr) {  expr = expr.trim();  if (!isNaN(expr)) return parseFloat(expr);  if (expr.startsWith('&quot;')) return expr.slice(1, expr.lastIndexOf('&quot;'));  if (state.variables[expr]) return state.variables[expr];    const parts = expr.split(/([+\-*/])/).map(p => p.trim());  if (parts.length === 3) {  const left = evaluateExpression(parts[0]);  const op = parts[1];  const right = evaluateExpression(parts[2]);  if (typeof left === 'number' &amp;&amp; typeof right === 'number') {  return op === '+' ? left + right :  op === '-' ? left - right :  op === '*' ? left * right :  op === '/' ? left / right : NaN;  }  }  throw new Error(&#96;Invalid expression: ${expr}&#96;);  }</p>
+
+<p> // Command handlers  const commands = {  PRINT(line) {  let text = line.slice(6).trim();  if (text.includes(';')) {  text = text.split(';').map(part => evaluateExpression(part)).join('');  } else {  text = evaluateExpression(text);  }  state.output += text + '\n';  },</p>
+
+<p> INPUT(line) {  const parts = line.slice(5).trim().split(',').map(s => s.trim());  const prompt = parts[0].slice(1, parts[0].lastIndexOf('&quot;'));  const varName = parts[1].replace('$', '');  const userInput = prompt(prompt);  state.variables[varName] = isNaN(userInput) ? userInput : parseFloat(userInput);  },</p>
+
+<p> LET(line) {  const [_, varName, expr] = line.slice(3).split('=').map(s => s.trim());  state.variables[varName.replace('$', '')] = evaluateExpression(expr);  },</p>
+
+<p> IF(line) {  const condition = line.slice(2).split('THEN')[0].trim();  const action = line.slice(line.indexOf('THEN') + 4).trim();  const [left, op, right] = condition.split(/([><=])/).map(s => s.trim());  const leftVal = evaluateExpression(left);  const rightVal = evaluateExpression(right);  let result = false;</p>
+
+<p> if (op === '>') result = leftVal > rightVal;  else if (op === '<') result = leftVal < rightVal;  else if (op === '=') result = leftVal == rightVal;</p>
+
+<p> if (result) executeLine(action);  },</p>
+
+<p> FOR(line) {  const parts = line.slice(3).split('TO').map(s => s.trim());  const [varName, start] = parts[0].split('=').map(s => s.trim());  const end = evaluateExpression(parts[1]);  state.variables[varName] = evaluateExpression(start);  const loopEnd = state.lines.findIndex((l, i) => i > state.currentLine &amp;&amp; l.trim().startsWith('NEXT'));  state.loops = state.loops || [];  state.loops.push({ varName, end, loopEnd, startLine: state.currentLine });  },</p>
+
+<p> NEXT(line) {  const loop = state.loops[state.loops.length - 1];  if (loop) {  state.variables[loop.varName]++;  if (state.variables[loop.varName] <= loop.end) {  state.currentLine = loop.startLine;  } else {  state.loops.pop();  }  }  },</p>
+
+<p> GOSUB(line) {  const target = parseInt(line.slice(5).trim());  state.callStack = state.callStack || [];  state.callStack.push(state.currentLine);  state.currentLine = state.lineNumbers[target] - 1;  },</p>
+
+<p> RETURN() {  if (state.callStack &amp;&amp; state.callStack.length) {  state.currentLine = state.callStack.pop();  }  },</p>
+
+<p> GOTO(line) {  const target = parseInt(line.slice(4).trim());  state.currentLine = state.lineNumbers[target] - 1;  },</p>
+
+<p> SCREEN(line) {  state.graphicsMode = true;  ctx.clearRect(0, 0, canvas.width, canvas.height);  },</p>
+
+<p> PSET(line) {  if (!state.graphicsMode) return;  const [coords, color] = line.slice(4).split(',').map(s => s.trim());  const [x, y] = coords.slice(1, -1).split(',').map(s => evaluateExpression(s));  const col = parseInt(evaluateExpression(color));  ctx.fillStyle = &#96;rgb(${col}, ${col}, ${col})&#96;;  ctx.fillRect(x, y, 1, 1);  }  };</p>
+
+<p> // Execute a single line  function executeLine(line) {  for (const cmd in commands) {  if (line.startsWith(cmd)) {  commands[cmd](line);  return;  }  }  throw new Error(&#96;Unknown command: ${line}&#96;);  }</p>
+
+<p> // Main interpreter  function runCode() {  const code = editor.getValue();  output.textContent = '';  state.output = '';  state.variables = {};  state.lines = code.split('\n').map(l => l.trim()).filter(l => l);  state.lineNumbers = {};  state.loops = [];  state.callStack = [];  state.graphicsMode = false;</p>
+
+<p> // Map line numbers  state.lines.forEach((line, i) => {  const match = line.match(/^\d+/);  if (match) state.lineNumbers[parseInt(match[0])] = i;  });</p>
+
+<p> state.currentLine = 0;  while (state.currentLine < state.lines.length) {  const line = state.lines[state.currentLine];  if (!line || /^\d+/.test(line) &amp;&amp; !line.slice(line.indexOf(' ')).trim()) {  state.currentLine++;  continue;  }  try {  const cmdLine = /^\d+/.test(line) ? line.slice(line.indexOf(' ')).trim() : line;  executeLine(cmdLine);  } catch (e) {  state.output += &#96;Error at line ${state.currentLine + 1}: ${e.message}\n&#96;;  break;  }  state.currentLine++;  }  output.textContent = state.output;  }  </script> </body> </html></p>
